@@ -61,9 +61,23 @@ const Reservation = () => {
 
   const isReserved = Number(reservation?.reserved) === 1;
 
+  // Build image URL (served from /api/uploads). Fallback to placeholder if missing or load error.
+  const placeholder = `${process.env.REACT_APP_API_BASE_URL}/uploads/placeholder_100.jpg`;
+  const imageUrl = `${process.env.REACT_APP_API_BASE_URL}/uploads/${reservation?.image_name || "placeholder_100.jpg"}`;
+
   return (
     <div className="container my-4">
       {error && <div className="alert alert-danger">{error}</div>}
+
+      <div className="d-flex justify-content-center mb-3">
+        <img
+          src={imageUrl}
+          alt={reservation?.location || "Reservation"}
+          className="img-fluid rounded"
+          style={{ maxHeight: 260, objectFit: "cover" }}
+          onError={(e) => { e.currentTarget.src = placeholder; }}
+        />
+      </div>
 
       <h1 className="mb-2 text-center">{reservation?.location}</h1>
       <p className="text-center">
