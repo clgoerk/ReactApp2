@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
+import { useAuth } from "../context/AuthContext";
 
 function ReservationList() {
   const [reservations, setReservations] = useState([]);
@@ -9,6 +10,7 @@ function ReservationList() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalReservations, setTotalReservations] = useState(0);
   const reservationsPerPage = 6;
+  const { user } = useAuth();
 
   // Format MySQL TIME (HH:MM:SS) to 12-hour AM/PM
   const fmt = (t) => {
@@ -19,24 +21,41 @@ function ReservationList() {
     return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit", hour12: true });
   };
 
-  useEffect(() => {
-    const fetchReservations = async () => {
-      setIsLoading(true);
-      try {
-        const response = await axios.get(
-          `${process.env.REACT_APP_API_BASE_URL}/reservations.php?page=${currentPage}`
-        );
-        setReservations(response.data.reservations || []);
-        setTotalReservations(response.data.totalReservations || 0);
-        setIsLoading(false);
-      } catch (err) {
-        console.error(err);
-        setError("Failed to load reservations.");
-        setIsLoading(false);
-      }
-    };
-    fetchReservations();
+  const fetchReservations = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const response = await axios.get(
+        `${process.env.REACT_APP_API_BASE_URL}/reservations.php?page=${currentPage}`
+      );
+      setReservations(response.data.reservations || []);
+      setTotalReservations(response.data.totalReservations || 0);
+    } catch (err) {
+      console.error(err);
+      setError("Failed to load reservations.");
+    } finally {
+      setIsLoading(false);
+    }
   }, [currentPage]);
+
+  useEffect(() => {
+    fetchReservations();
+  }, [fetchReservations]);
+
+  const handleDelete = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this reservation?")) return;
+
+    try {
+      await axios.post(
+        `${process.env.REACT_APP_API_BASE_URL}/delete-reservation.php`,
+        { id },
+        { withCredentials: true }
+      );
+      fetchReservations(); // refresh list
+    } catch (err) {
+      console.error(err);
+      alert("Failed to delete reservation.");
+    }
+  };
 
   const totalPages = Math.ceil(totalReservations / reservationsPerPage) || 1;
   const goToPreviousPage = () => setCurrentPage((p) => Math.max(1, p - 1));
@@ -62,14 +81,32 @@ function ReservationList() {
                     </p>
                     <span
                       className={`badge ${isReserved ? "bg-danger" : "bg-success"}`}
-                      aria-label={isReserved ? "Reserved" : "Available"}
                     >
                       {isReserved ? "Reserved" : "Available"}
                     </span>
-                    <div className="mt-3">
+
+                    <div className="mt-3 d-flex justify-content-center gap-2">
                       <Link to={`/reservation/${reservation.id}`} className="btn btn-primary">
                         View
                       </Link>
+
+                      {/* 🔒 Only admins see Edit & Delete */}
+                      {user?.role === "admin" && (
+                        <>
+                          <Link
+                            to={`/edit-reservation/${reservation.id}`}
+                            className="btn btn-secondary"
+                          >
+                            Edit
+                          </Link>
+                          <button
+                            className="btn btn-danger"
+                            onClick={() => handleDelete(reservation.id)}
+                          >
+                            Delete
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>
