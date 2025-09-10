@@ -46,7 +46,7 @@ const Navbar = () => {
   };
 
   return (
-    <nav className="navbar navbar-expand-lg navbar-light bg-success mb-4 border-bottom shadow-sm">
+    <nav className="navbar navbar-expand-lg navbar-dark bg-success mb-4 border-bottom shadow-sm">
       <div className="container">
         <Link className="navbar-brand fw-bold text-white" to="/">
           Reservation Manager
